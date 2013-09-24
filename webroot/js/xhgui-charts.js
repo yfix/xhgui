@@ -6,14 +6,14 @@ window.Xhgui = {};
 Xhgui.colors = function () {
     var colors = [
         '#59bdd2', // blue
-        '#637964', // green
         '#d46245', // red
+        '#637964', // green
         '#ffe85e', // yellow
         '#e9814f', // orange
         '#e3b7b3', // pink
         '#b63c71' // purple
     ];
-    return d3.scale.ordinal().range(colors);
+    return colors;
 };
 
 /**
@@ -115,20 +115,17 @@ Xhgui.columnchart = function (container, data, options) {
  *
  * Options:
  *
- * - xAxis - The key to use for the x-axis.
- * - series - An array of the keys used for the series data.
  * - title - The chart title.
- * - legend - An array of legends for each series.
  * - postfix - A string to append to the tooltip for each datapoint.
  * - height - The height of the chart.
  *
  * @param string container Selector to the container for the graph
  * @param array data The data to graph. Should be an array of objects. Each
  * object should contain a key for each element in `options.series`.
- * @param object options The options to use. Needs to define xAxis & series
+ * @param object options The options to use.
  */
 Xhgui.linegraph = function (container, data, options) {
- 
+
     data = data.filter(function(elt) {
         return options.series.indexOf(elt.key) >= 0;
     });
@@ -142,12 +139,17 @@ Xhgui.linegraph = function (container, data, options) {
 
     nv.addGraph(function() {
         var chart = nv.models.lineChart();
+
         chart.x(function(d,i) { return d[0]; })
             .y(function(d) { return d[1]; });
+
         chart.xAxis
           .tickFormat(function(d) {
             return Xhgui.formatDate(new Date(d))
         });
+
+        chart.color(Xhgui.colors());
+
         chart.yAxis
             .tickFormat(d3.format('s'))
             .showMaxMin(false)
