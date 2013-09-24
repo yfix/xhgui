@@ -33,7 +33,6 @@ Xhgui.formatNumber = d3.format('n');
  * Bind a tooltip to an element.
  */
 Xhgui.tooltip = function (container, options) {
-
     if (
         !options.formatter ||
         !options.positioner ||

@@ -225,15 +225,6 @@ tr .no-results {
   stroke: none;
   fill: none;
 }
-.nvtooltip {
-    text-align: center;
-    border-radius: 5px;
-    padding: 2px;
-}
-.chart-container .popover {
-    min-width: 125px;
-    width: auto;
-}
 
 .chart-axis path,
 .chart-axis line {
@@ -253,6 +244,21 @@ tr .no-results {
 
 .nv-bar {
     fill: #d46245;
+}
+
+/**
+ * Chart tooltips
+ */
+.nvtooltip {
+    min-width: 125px;
+    width: auto;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px;
+
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
 }
 
 /**
