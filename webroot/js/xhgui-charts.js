@@ -92,8 +92,8 @@ Xhgui.columnchart = function (container, data, options) {
 
       chart.tooltipContent(function(key, x, y, e, graph) {
             var value = e.series.values[e.pointIndex].value;
-            return '<div class="top"><strong>'+x+'</strong>'
-                   +'<br />'+Xhgui.formatNumber(value)+' '+options.postfix+'</div>';
+            return '<div class="top"><strong>' + x + '</strong>'
+                    + '<br />' + Xhgui.formatNumber(value) + ' ' + options.postfix + '</div>';
       });
 
       d3.select(container).append('svg')
@@ -142,8 +142,7 @@ Xhgui.linegraph = function (container, data, options) {
         chart.x(function(d,i) { return d[0]; })
             .y(function(d) { return d[1]; });
 
-        chart.xAxis
-          .tickFormat(function(d) {
+        chart.xAxis.tickFormat(function(d) {
             return Xhgui.formatDate(new Date(d))
         });
 
