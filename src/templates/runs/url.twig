@@ -49,7 +49,6 @@ $(document).ready(function () {
         height: 300,
         xAxis: 'date',
         title: 'Time usage',
-        legend: ['Wall time', 'CPU time'],
         postfix: ' \u00b5s',
     });
     Xhgui.linegraph('#memory-line-graph', graphData, {
@@ -57,7 +56,6 @@ $(document).ready(function () {
         height: 300,
         xAxis: 'date',
         title: 'Memory usage',
-        legend: ['Memory usage', 'Peak memory usage'],
         postfix: ' bytes'
     });
 });
