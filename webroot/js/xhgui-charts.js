@@ -19,18 +19,12 @@ Xhgui.colors = function () {
 /**
  * Format a date object to a readable string in SQL date format.
  *
- * @param Date date The date to format.
- * @return String Formatted date string.
  */
 Xhgui.formatDate = d3.time.format('%Y-%m-%d');
 
 /**
  * Format a number to have thousand separators + decimal places.
  * All inputs will be cast to a Number
- *
- * @param Mixed num The number or string number to format.
- * @param Number decimalPlaces Number of decimal places to use.
- * @return String Formatted number string.
  */
 Xhgui.formatNumber = d3.format('n');
 
@@ -47,7 +41,7 @@ Xhgui.tooltip = function (container, options) {
     ) {
         throw new Exception('You need the formatter, positioner & bindTo options.');
     }
-    
+
     options.bindTo.on('mouseover', function (d, i) {
         var content, position;
         nv.tooltip.cleanup();
@@ -57,7 +51,7 @@ Xhgui.tooltip = function (container, options) {
 
         // Get the tooltip position.
         position = options.positioner.call(this, d, i);
-        
+
         nv.tooltip.show([position.x, position.y], content, null, null, this.parentNode);
 
         d3.select(document).on('mouseout', hide);
@@ -73,7 +67,6 @@ Xhgui.tooltip = function (container, options) {
  * @param object options
  */
 Xhgui.columnchart = function (container, data, options) {
-
     data = [{
         key:'',
         values:data
@@ -146,7 +139,7 @@ Xhgui.linegraph = function (container, data, options) {
         height = options.height || (parseInt(container.style('height'), 10) - margin.top - margin.bottom),
         width = options.width || (parseInt(container.style('width'), 10) - margin.left - margin.right),
         lastIndex = data.length - 1;
-    
+
     nv.addGraph(function() {
         var chart = nv.models.lineChart();
         chart.x(function(d,i) { return d[0]; })
@@ -159,11 +152,11 @@ Xhgui.linegraph = function (container, data, options) {
             .tickFormat(d3.format('s'))
             .showMaxMin(false)
             .axisLabel(options.postfix);
-        
-        chart.tooltipContent(function(key, x, y, e, graph) { 
+
+        chart.tooltipContent(function(key, x, y, e, graph) {
             var value = e.series.values[e.pointIndex][1];
-            return '<div class="top"><strong>'+x+'</strong>'
-                   +'<br />'+Xhgui.formatNumber(value)+' '+options.postfix+'</div>';
+            return '<div class="top"><strong>' + x + '</strong>'
+                   + '<br />' + Xhgui.formatNumber(value) + ' ' + options.postfix + '</div>';
         });
         var svg = container.append('svg');
 
