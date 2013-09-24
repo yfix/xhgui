@@ -2,7 +2,14 @@
 /**
  * Routes for Xhgui
  */
-$app->error(function (Exception $e) use ($app) {
+$app->error(function (Exception $e) use ($di, $app) {
+    $view = $di['view'];
+    $view->parserOptions['cache'] = false;
+    $view->parserExtensions = array(
+        new Xhgui_Twig_Extension($app)
+    );
+
+    $app->view($view);
     $app->render('error/view.twig', array(
         'message' => $e->getMessage(),
         'stack_trace' => $e->getTraceAsString(),
@@ -11,7 +18,9 @@ $app->error(function (Exception $e) use ($app) {
 
 // Profile Runs routes
 $app->get('/', function () use ($di) {
-    $di['runController']->index();
+    $c = $di['runController'];
+    $c->index();
+    $c->render();
 })->name('home');
 
 $app->get('/run/view', function () use ($di) {
@@ -37,11 +46,15 @@ $app->get('/run/callgraph', function () use ($di) {
 
 // Watch function routes.
 $app->get('/watch', function () use ($di) {
-    $di['watchController']->get();
+    $c = $di['watchController'];
+    $c->get();
+    $c->render();
 })->name('watch.list');
 
 $app->post('/watch', function () use ($di) {
-    $di['watchController']->post();
+    $c = $di['watchController'];
+    $c->post();
+    $c->render();
 })->name('watch.save');
 
 
@@ -57,3 +70,14 @@ $app->get('/custom/help', function () use ($di) {
 $app->post('/custom/query', function () use ($di) {
     $di['customController']->query();
 })->name('custom.query');
+
+
+// Waterfall routes
+$app->get('/waterfall', function () use ($di) {
+    $di['waterfallController']->index();
+})->name('waterfall.list');
+
+$app->get('/waterfall/data', function () use ($di) {
+    $di['waterfallController']->query();
+})->name('waterfall.data');
+
