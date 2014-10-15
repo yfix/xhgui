@@ -3,8 +3,9 @@ xhgui
 
 A graphical interface for XHProf data built on MongoDB.
 
-This tool requires that [XHProf](http://pecl.php.net/package/xhprof) is
-installed, which is a PHP Extension that records and provides profiling data.
+This tool requires that [XHProf](http://pecl.php.net/package/xhprof) or 
+its fork [Uprofiler](https://github.com/FriendsOfPHP/uprofiler) is installed, 
+which is a PHP Extension that records and provides profiling data.
 XHGui (this tool) takes that information, saves it in MongoDB, and provides
 a convienent GUI for working with it.
 
@@ -12,7 +13,8 @@ a convienent GUI for working with it.
 System Requirements
 ===================
 
- * [XHProf](http://pecl.php.net/package/xhprof) to actually profile the data
+ * [XHProf](http://pecl.php.net/package/xhprof) or 
+   [Uprofiler](https://github.com/FriendsOfPHP/uprofiler) to actually profile the data
  * [MongoDB PHP](http://pecl.php.net/package/mongo) MongoDB PHP extension
  * [MongoDB](http://www.mongodb.org/) MongoDB Itself
  * [mcrypt] (http://php.net/manual/en/book.mcrypt.php) PHP must be configured
@@ -201,6 +203,24 @@ With Nginx in fastcgi mode you could use:
         root /Users/markstory/Sites/awesome-thing/app/webroot/;
         fastcgi_param PHP_VALUE "auto_prepend_file=/Users/markstory/Sites/xhgui/external/header.php";
      }
+
+Profiling a CLI script
+======================
+
+The simplest way to get a CLI script profiled, is to use
+`external/header.php`.  This file is designed to be combined with PHP's
+[auto_prepend_file](http://www.php.net/manual/en/ini.core.php#ini.auto-prepend-file)
+directive. This can be enabled system-wide through `php.ini`. Alternatively,
+you can enable include the `header.php` at the top of your script:
+
+    <?php
+    require '/path/to/xhgui/external/header.php';
+    // Rest of script.
+
+Or use the `-d` flag:
+
+    php -d auto_prepend_file=/path/to/xhgui/external/header.php do_work.php
+
 
 Saving & importing profiles
 ---------------------------

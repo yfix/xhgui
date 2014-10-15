@@ -11,7 +11,6 @@
  * auto_prepend_file directive http://php.net/manual/en/ini.core.php#ini.auto-prepend-file
  */
 
-
 /* xhprof_enable()
  * See: http://php.net/manual/en/xhprof.constants.php
  *
@@ -19,6 +18,7 @@
  * XHPROF_FLAGS_NO_BUILTINS
  *  Omit built in functions from return
  *  This can be useful to simplify the output, but there's some value in seeing that you've called strpos() 2000 times
+ *  (disabled on PHP 5.5+ as it causes a segfault)
  *
  * XHPROF_FLAGS_CPU
  *  Include CPU profiling information in output
@@ -31,14 +31,21 @@
  *
  */
 
-// this file should not - under no circumstances - interfere with any other application
-if (!extension_loaded('xhprof')) {
-    error_log('xhgui - extension xhprof not loaded');
-    return;
-}
+/* uprofiler support
+ * The uprofiler extension is a fork of xhprof.  See: https://github.com/FriendsOfPHP/uprofiler
+ *
+ * The two extensions are very similar, and this script will use the uprofiler extension if it is loaded, 
+ * or the xhprof extension if not.  At least one of these extensions must be present.
+ *
+ * The UPROFILER_* constants mirror the XHPROF_* ones exactly, with one additional constant available:
+ *
+ * UPROFILER_FLAGS_FUNCTION_INFO (integer)
+ *  Adds more information about function calls (this information is not currently used by XHGui)
+ */
 
-if (!extension_loaded('mongo')) {
-    error_log('xhgui - extension mongo not loaded');
+// this file should not - under no circumstances - interfere with any other application
+if (!extension_loaded('xhprof') && !extension_loaded('uprofiler')) {
+    error_log('xhgui - either extension xhprof or uprofiler must be loaded');
     return;
 }
 
@@ -55,54 +62,85 @@ if (file_exists($dir . '/config/config.php')) {
 }
 unset($root);
 
-if (!Xhgui_Config::shouldRun()) {
+if (!extension_loaded('mongo') && Xhgui_Config::read('save.handler') === 'mongodb') {
+    error_log('xhgui - extension mongo not loaded');
     return;
 }
 
+if (!Xhgui_Config::shouldRun()) {
+    return;
+}
 
 if (!isset($_SERVER['REQUEST_TIME_FLOAT'])) {
     $_SERVER['REQUEST_TIME_FLOAT'] = microtime(true);
 }
 
-
-xhprof_enable(XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
-
-register_shutdown_function(function() {
-    // ignore_user_abort(true) allows your PHP script to continue executing, even if the user has terminated their request.
-    // Further Reading: http://blog.preinheimer.com/index.php?/archives/248-When-does-a-user-abort.html
-    // flush() asks PHP to send any data remaining in the output buffers. This is normally done when the script completes, but
-    // since we're delaying that a bit by dealing with the xhprof stuff, we'll do it now to avoid making the user wait.
-    $data['profile'] = xhprof_disable();
-
-    ignore_user_abort(true);
-    flush();
-
-    if (!defined('XHGUI_ROOT_DIR')) {
-        require dirname(dirname(__FILE__)) . '/src/bootstrap.php';
+if (extension_loaded('uprofiler')) {
+    uprofiler_enable(UPROFILER_FLAGS_CPU | UPROFILER_FLAGS_MEMORY);
+} else {
+    if (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION > 4) {
+        xhprof_enable(XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY | XHPROF_FLAGS_NO_BUILTINS);
+    } else {
+        xhprof_enable(XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY);
     }
+}
 
-    $uri = array_key_exists('REQUEST_URI', $_SERVER) ? $_SERVER['REQUEST_URI'] : null;
-    if (empty($uri) && isset($_SERVER['argv'])) {
-        $cmd = basename($_SERVER['argv'][0]);
-        $uri = $cmd . ' ' . implode(' ', array_slice($_SERVER['argv'], 1));
+register_shutdown_function(
+    function () {
+        if (extension_loaded('uprofiler')) {
+            $data['profile'] = uprofiler_disable();
+        } else {
+            $data['profile'] = xhprof_disable();
+        }
+
+        // ignore_user_abort(true) allows your PHP script to continue executing, even if the user has terminated their request.
+        // Further Reading: http://blog.preinheimer.com/index.php?/archives/248-When-does-a-user-abort.html
+        // flush() asks PHP to send any data remaining in the output buffers. This is normally done when the script completes, but
+        // since we're delaying that a bit by dealing with the xhprof stuff, we'll do it now to avoid making the user wait.
+        ignore_user_abort(true);
+        flush();
+
+        if (!defined('XHGUI_ROOT_DIR')) {
+            require dirname(dirname(__FILE__)) . '/src/bootstrap.php';
+        }
+
+        $uri = array_key_exists('REQUEST_URI', $_SERVER)
+            ? $_SERVER['REQUEST_URI']
+            : null;
+        if (empty($uri) && isset($_SERVER['argv'])) {
+            $cmd = basename($_SERVER['argv'][0]);
+            $uri = $cmd . ' ' . implode(' ', array_slice($_SERVER['argv'], 1));
+        }
+
+        $time = array_key_exists('REQUEST_TIME', $_SERVER)
+            ? $_SERVER['REQUEST_TIME']
+            : time();
+        $requestTimeFloat = explode('.', $_SERVER['REQUEST_TIME_FLOAT']);
+
+        if (Xhgui_Config::read('save.handler') === 'file') {
+            $requestTs = array('sec' => $time, 'usec' => 0);
+            $requestTsMicro = array('sec' => $requestTimeFloat[0], 'usec' => $requestTimeFloat[1]);
+        } else {
+            $requestTs = new MongoDate($time);
+            $requestTsMicro = new MongoDate($requestTimeFloat[0], $requestTimeFloat[1]);
+        }
+
+        $data['meta'] = array(
+            'url' => $uri,
+            'SERVER' => $_SERVER,
+            'get' => $_GET,
+            'env' => $_ENV,
+            'simple_url' => Xhgui_Util::simpleUrl($uri),
+            'request_ts' => $requestTs,
+            'request_ts_micro' => $requestTsMicro,
+            'request_date' => date('Y-m-d', $time),
+        );
+
+        try {
+            $container = Xhgui_ServiceContainer::instance();
+            $container['saver']->save($data);
+        } catch (Exception $e) {
+            error_log('xhgui - ' . $e->getMessage());
+        }
     }
-
-    $time = array_key_exists('REQUEST_TIME', $_SERVER) ? $_SERVER['REQUEST_TIME'] : null;
-    $data['meta'] = array(
-        'url' => $uri,
-        'SERVER' => $_SERVER,
-        'get' => $_GET,
-        'env' => $_ENV,
-        'simple_url' => Xhgui_Util::simpleUrl($uri),
-        'request_ts' => new MongoDate($time),
-        'request_ts_micro' => new MongoDate($_SERVER['REQUEST_TIME_FLOAT']),
-        'request_date' => date('Y-m-d', $time),
-    );
-
-    try {
-        $container = Xhgui_ServiceContainer::instance();
-        $container['saver']->save($data);
-    } catch (Exception $e) {
-        error_log('xhgui - ' . $e->getMessage());
-    }
-});
+);
